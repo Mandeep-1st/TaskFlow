@@ -17,9 +17,12 @@ interface LoginUser {
 }
 
 interface AddMemberInput {
+    name: string;
     email: string;
+    password: string;
     role: "org_admin" | "member";
 }
+
 
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -132,18 +135,43 @@ const logout = async (incomingToken: string, authenticatedUserId: number) => {
     throw new ApiError(401, "Invalid or expired refresh token", "INVALID_REFRESH_TOKEN");
 };
 
-const addMember = async ({ email, role }: AddMemberInput, orgId: number) => {
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) throw new ApiError(404, "User not found", "USER_NOT_FOUND");
 
-    const existingMembership = await prisma.orgMember.findUnique({
-        where: { userId_orgId: { userId: user.id, orgId } },
+const addMember = async ({ name, email, password, role }: AddMemberInput, orgId: number) => {
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+
+    // check membership conflict BEFORE creating anything, so we don't create
+    // a user and then fail on the membership step, leaving a user with no org
+    if (existingUser) {
+        const existingMembership = await prisma.orgMember.findUnique({
+            where: { userId_orgId: { userId: existingUser.id, orgId } },
+        });
+        if (existingMembership) {
+            throw new ApiError(409, "User is already an organization member", "MEMBERSHIP_EXISTS");
+        }
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+        const user = existingUser
+            ? existingUser
+            : await tx.user.create({
+                data: { name, email, password: await bcrypt.hash(password, 12) },
+            });
+
+        const membership = await tx.orgMember.create({
+            data: { userId: user.id, orgId, role },
+        });
+
+        return { user, membership };
     });
-    if (existingMembership) throw new ApiError(409, "User is already an organization member", "MEMBERSHIP_EXISTS");
 
-    const membership = await prisma.orgMember.create({ data: { userId: user.id, orgId, role } });
-    return { id: membership.id, userId: user.id, orgId, role: membership.role };
+    return {
+        workflow: existingUser ? "existing_user" : "new_user",
+        passwordApplied: !existingUser, // tells the frontend whether the password it sent was actually set
+        user: { id: result.user.id, name: result.user.name, email: result.user.email },
+        membership: { id: result.membership.id, orgId, role: result.membership.role },
+    };
 };
+
 
 const logoutAll = async (userId: number) => {
     await prisma.refreshToken.updateMany({ where: { userId, revoked: false }, data: { revoked: true } });
