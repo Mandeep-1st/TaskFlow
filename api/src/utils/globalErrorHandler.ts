@@ -1,21 +1,30 @@
 import type { Request, Response, NextFunction } from "express";
+import { ZodError, treeifyError } from "zod";
 
 interface AppError extends Error {
     statusCode?: number;
-    errors?: any[];
-    [key: string]: any;
+    code?: string;
+    details?: Record<string, unknown>;
 }
 
 const globalErrorHandler = (err: AppError | unknown, _req: Request, res: Response, _next: NextFunction) => {
+    if (err instanceof ZodError) {
+        return res.status(400).json({
+            error: "Validation failed",
+            code: "VALIDATION_ERROR",
+            details: treeifyError(err),
+        });
+    }
+
     const statusCode = (err as AppError).statusCode || 500;
     const message = (err as AppError).message || "Internal Server Error";
-    const errors = (err as AppError).errors || [];
+    const code = (err as AppError).code || "INTERNAL_ERROR";
+    const details = (err as AppError).details || {};
 
     return res.status(statusCode).json({
-        success: false,
-        message,
-        errors,
-        ...(process.env.NODE_ENV === "development" && { stack: (err as AppError).stack }),
+        error: message,
+        code,
+        details,
     });
 };
 
