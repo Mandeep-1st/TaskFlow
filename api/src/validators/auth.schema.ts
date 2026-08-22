@@ -14,6 +14,8 @@ export const loginSchema = z.object({
 })
 
 export const addMemberSchema = z.object({
+    name: z.string().trim().min(1),
     email: z.email(),
+    password: z.string().min(8),
     role: z.enum(["org_admin", "member"]).default("member"),
 });
