@@ -8,7 +8,16 @@ type TaskFilters = z.infer<typeof taskFilterSchema>;
 const taskOrgWhere = (orgId: number) => ({ project: { is: { orgId } } });
 
 const getTaskOrThrow = async (id: number, orgId: number) => {
-    const task = await prisma.task.findFirst({ where: { id, ...taskOrgWhere(orgId) } });
+    const task = await prisma.task.findFirst({
+        where: { id, ...taskOrgWhere(orgId) },
+        include: {
+            assignments: {
+                include: {
+                    user: { select: { id: true, name: true, email: true } },
+                },
+            },
+        },
+    });
     if (!task) throw new ApiError(404, "Task not found", "TASK_NOT_FOUND");
     return task;
 };

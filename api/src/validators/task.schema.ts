@@ -15,6 +15,7 @@ export const createTaskSchema = z.object({
 
 export const updateTaskSchema = z.object({
     ...taskFields,
+    title: taskFields.title.optional(),
     projectId: z.coerce.number().int().positive().optional(),
 }).refine((value) => Object.keys(value).length > 0, "At least one field must be provided");
 

@@ -13,6 +13,7 @@ export const createProject = (name: string, orgId: number) =>
 export const getProjects = (orgId: number) =>
     prisma.project.findMany({ where: { orgId }, orderBy: { id: "desc" } });
 
+
 export const getProject = (id: number, orgId: number) => getProjectOrThrow(id, orgId);
 
 export const updateProject = async (id: number, name: string | undefined, orgId: number) => {
