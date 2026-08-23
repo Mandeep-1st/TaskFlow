@@ -17,7 +17,7 @@ export const swaggerSpec = swaggerJSDoc({
             version: "1.0.0",
             description: "Multi-tenant project-management API.",
         },
-        servers: [{ url: "http://localhost:3000", description: "Local development" }],
+        servers: [{ url: "http://localhost:3000", description: "Local development" },{url:process.env.BACKEND_URL, description:"Production"}],
         components: {
             securitySchemes: {
                 bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
