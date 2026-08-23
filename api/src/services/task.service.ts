@@ -2,12 +2,13 @@ import prisma from "../config/prisma.js";
 import { ApiError } from "../utils/apiError.js";
 import type { taskFilterSchema } from "../validators/task.schema.js";
 import type { z } from "zod";
+import { emailQueue } from "../jobs/email.queue.js";
 
 type TaskFilters = z.infer<typeof taskFilterSchema>;
 
 const taskOrgWhere = (orgId: number) => ({ project: { is: { orgId } } });
 
-const getTaskOrThrow = async (id: number, orgId: number) => {
+export const getTaskOrThrow = async (id: number, orgId: number) => {
     const task = await prisma.task.findFirst({
         where: { id, ...taskOrgWhere(orgId) },
         include: {
@@ -86,7 +87,20 @@ export const assignUser = async (taskId: number, userId: number, orgId: number) 
 
     const existingAssignment = await prisma.taskAssignment.findUnique({ where: { taskId_userId: { taskId, userId } } });
     if (existingAssignment) throw new ApiError(409, "User is already assigned to this task", "ASSIGNMENT_EXISTS");
-    return prisma.taskAssignment.create({ data: { taskId, userId } });
+    return prisma.$transaction(async (tx) => {
+        const assignment = await tx.taskAssignment.create({ data: { taskId, userId } });
+        //we will mail when an task get assigned
+        try {
+            const job = await emailQueue.add(
+                "task-assigned",
+                { taskId, userId },
+                { attempts: 3, backoff: { type: "exponential", delay: 1000 } },
+            );
+            return { assignment, jobId: job.id };
+        } catch {
+            throw new ApiError(500, "Failed to schedule notification", "ENQUEUE_FAILED");
+        }
+    });
 };
 
 export const unassignUser = async (taskId: number, userId: number, orgId: number) => {
