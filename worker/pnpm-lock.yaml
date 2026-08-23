@@ -11,6 +11,9 @@ importers:
       bullmq:
         specifier: ^6.2.0
         version: 6.2.0(ioredis@6.0.0)
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
       ioredis:
         specifier: ^6.0.0
         version: 6.0.0
@@ -382,6 +385,10 @@ packages:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
 
+  dotenv@17.4.2:
+    resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
+    engines: {node: '>=12'}
+
   esbuild@0.28.2:
     resolution: {integrity: sha512-HKVLS8dvII+xoKW9kmqxbRKrnWEXfJJr/FZhhJmiqIB0e053QNYFqOBouTMO/k5sID4MvCiUCvv8b9M4h32wIA==}
     engines: {node: '>=18'}
@@ -633,6 +640,8 @@ snapshots:
 
   detect-libc@2.1.2:
     optional: true
+
+  dotenv@17.4.2: {}
 
   esbuild@0.28.2:
     optionalDependencies:

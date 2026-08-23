@@ -89,8 +89,9 @@ export const assignUser = async (taskId: number, userId: number, orgId: number) 
     if (existingAssignment) throw new ApiError(409, "User is already assigned to this task", "ASSIGNMENT_EXISTS");
     return prisma.$transaction(async (tx) => {
         const assignment = await tx.taskAssignment.create({ data: { taskId, userId } });
-        //we will mail when an task get assigned
+        //we will add this assignment as a notification to our emailQueue 
         try {
+            //email_queue will only return a acceptance which notify that the job is successfully stored in redis.
             const job = await emailQueue.add(
                 "task-assigned",
                 { taskId, userId },

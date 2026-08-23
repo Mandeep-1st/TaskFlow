@@ -6,5 +6,5 @@ if (!redisUrl) {
 }
 
 export const redisConnection = new Redis(redisUrl, {
-    maxRetriesPerRequest: null,
+    maxRetriesPerRequest: 1,
 });

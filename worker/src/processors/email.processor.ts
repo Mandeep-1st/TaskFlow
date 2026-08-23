@@ -11,6 +11,7 @@ const deadLetterQueue = new Queue("email-dead-letter-queue", { connection: redis
 export const emailWorker = new Worker<TaskAssignedEmailJob>(
     "email-queue",
     async (job) => {
+        //currently we are having one job "task-assigned" otherwise we will use switch(case)
         const { taskId, userId } = job.data;
         console.log(`[MOCK EMAIL] Notifying user ${userId} about task ${taskId} assignment`);
     },
@@ -22,6 +23,7 @@ emailWorker.on("failed", (job, error) => {
     console.error(`Job ${job?.id} failed: ${error.message}`);
     if (!job || job.attemptsMade < (job.opts.attempts ?? 1)) return;
 
+    //the void will reject the promise we don't need to do anything we just add the dead job in the deadLetterQueue. 
     void deadLetterQueue.add("dead-letter", {
         originalJobId: job.id,
         data: job.data,
