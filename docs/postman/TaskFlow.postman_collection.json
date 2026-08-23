@@ -1,0 +1,95 @@
+{
+  "info": {
+    "_postman_id": "8d20bb32-00ff-4708-affc-647dcc1e4696",
+    "name": "TaskFlow",
+    "description": "TaskFlow API collection. Run Register then Login; Login stores the access token automatically. The refresh-token cookie is managed by Postman's cookie jar.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "orgId", "value": "" },
+    { "key": "projectId", "value": "" },
+    { "key": "taskId", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "commentId", "value": "" },
+    { "key": "jobId", "value": "" },
+    { "key": "email", "value": "taskflow.user@example.com" },
+    { "key": "password", "value": "password123" },
+    { "key": "userName", "value": "TaskFlow User" },
+    { "key": "organizationName", "value": "TaskFlow Demo Organization" }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"{{userName}}\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"organizationName\": \"{{organizationName}}\"\n}" },
+            "url": "{{baseUrl}}/auth/register"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const body = pm.response.json();", "if (pm.response.code === 201) pm.collectionVariables.set('orgId', body.data.organization.id);"] } }]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"orgId\": {{orgId}}\n}" },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Login succeeds', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.collectionVariables.set('accessToken', body.data.accessToken);", "pm.collectionVariables.set('orgId', body.data.organizationId);", "const setCookie = pm.response.headers.get('Set-Cookie') || '';", "const refreshMatch = setCookie.match(/refreshToken=([^;]+)/);", "if (refreshMatch) pm.collectionVariables.set('refreshToken', refreshMatch[1]);"] } }]
+        },
+        { "name": "Refresh Access Token", "request": { "auth": { "type": "noauth" }, "method": "POST", "url": "{{baseUrl}}/auth/refresh" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const body = pm.response.json();", "if (body.data && body.data.accessToken) pm.collectionVariables.set('accessToken', body.data.accessToken);"] } }] },
+        { "name": "Logout", "request": { "method": "POST", "url": "{{baseUrl}}/auth/logout" } },
+        { "name": "Add Member", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"New Member\",\n  \"email\": \"new.member@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"member\"\n}" }, "url": "{{baseUrl}}/auth/members" } }
+      ]
+    },
+    {
+      "name": "Projects",
+      "item": [
+        { "name": "Create Project", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Demo Project\"\n}" }, "url": "{{baseUrl}}/projects" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const body = pm.response.json();", "if (body.data && body.data.id) pm.collectionVariables.set('projectId', body.data.id);"] } }] },
+        { "name": "List Projects", "request": { "method": "GET", "url": "{{baseUrl}}/projects" } },
+        { "name": "Get Project", "request": { "method": "GET", "url": "{{baseUrl}}/projects/{{projectId}}" } },
+        { "name": "Update Project", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Demo Project Updated\"\n}" }, "url": "{{baseUrl}}/projects/{{projectId}}" } },
+        { "name": "Project Dashboard", "request": { "method": "GET", "url": "{{baseUrl}}/projects/{{projectId}}/dashboard" } },
+        { "name": "Delete Project", "request": { "method": "DELETE", "url": "{{baseUrl}}/projects/{{projectId}}" } }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        { "name": "Create Task", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Demo Task\",\n  \"description\": \"Created from the TaskFlow Postman collection\",\n  \"status\": \"todo\",\n  \"priority\": \"medium\",\n  \"projectId\": {{projectId}}\n}" }, "url": "{{baseUrl}}/tasks" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const body = pm.response.json();", "if (body.data && body.data.id) pm.collectionVariables.set('taskId', body.data.id);"] } }] },
+        { "name": "List Tasks (with filters)", "request": { "method": "GET", "url": "{{baseUrl}}/tasks?status=todo&priority=medium&page=1&limit=20" } },
+        { "name": "Get Task", "request": { "method": "GET", "url": "{{baseUrl}}/tasks/{{taskId}}" } },
+        { "name": "Update Task", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"status\": \"in_progress\",\n  \"dueDate\": \"2026-09-01\"\n}" }, "url": "{{baseUrl}}/tasks/{{taskId}}" } },
+        { "name": "Assign User", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"userId\": {{userId}}\n}" }, "url": "{{baseUrl}}/tasks/{{taskId}}/assign" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const body = pm.response.json();", "if (body.data && body.data.jobId) pm.collectionVariables.set('jobId', body.data.jobId);"] } }] },
+        { "name": "Unassign User", "request": { "method": "DELETE", "url": "{{baseUrl}}/tasks/{{taskId}}/assign/{{userId}}" } },
+        { "name": "Delete Task", "request": { "method": "DELETE", "url": "{{baseUrl}}/tasks/{{taskId}}" } }
+      ]
+    },
+    {
+      "name": "Comments",
+      "item": [
+        { "name": "Create Comment", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"content\": \"A comment created through Postman.\"\n}" }, "url": "{{baseUrl}}/tasks/{{taskId}}/comments" }, "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const body = pm.response.json();", "if (body.data && body.data.id) pm.collectionVariables.set('commentId', body.data.id);"] } }] },
+        { "name": "List Comments", "request": { "method": "GET", "url": "{{baseUrl}}/tasks/{{taskId}}/comments" } },
+        { "name": "Delete Comment", "request": { "method": "DELETE", "url": "{{baseUrl}}/tasks/comments/{{commentId}}" } }
+      ]
+    },
+    {
+      "name": "Jobs",
+      "item": [
+        { "name": "Get Job", "request": { "method": "GET", "url": "{{baseUrl}}/jobs/{{jobId}}" } },
+        { "name": "List Jobs", "request": { "method": "GET", "url": "{{baseUrl}}/jobs" } },
+        { "name": "List Dead-Letter Jobs", "request": { "method": "GET", "url": "{{baseUrl}}/jobs/dead-letters" } }
+      ]
+    }
+  ]
+}
