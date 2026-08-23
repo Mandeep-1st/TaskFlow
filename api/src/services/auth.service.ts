@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import prisma from "../config/prisma.js";
 import { ApiError } from "../utils/apiError.js";
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/token.js";
-
+type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 interface RegisterUser {
     name: string;
     email: string;
@@ -31,7 +31,7 @@ const register = async ({ name, email, password, organizationName }: RegisterUse
     if (existing) throw new ApiError(409, "Email already in use", "EMAIL_EXISTS");
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: TransactionClient) => {
         const user = await tx.user.create({ data: { name, email, password: hashedPassword } });
         const organization = await tx.organization.create({ data: { name: organizationName } });
         await tx.orgMember.create({
@@ -150,7 +150,7 @@ const addMember = async ({ name, email, password, role }: AddMemberInput, orgId:
         }
     }
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx:TransactionClient) => {
         const user = existingUser
             ? existingUser
             : await tx.user.create({

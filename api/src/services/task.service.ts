@@ -3,7 +3,7 @@ import { ApiError } from "../utils/apiError.js";
 import type { taskFilterSchema } from "../validators/task.schema.js";
 import type { z } from "zod";
 import { emailQueue } from "../jobs/email.queue.js";
-
+type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 type TaskFilters = z.infer<typeof taskFilterSchema>;
 
 const taskOrgWhere = (orgId: number) => ({ project: { is: { orgId } } });
@@ -87,7 +87,7 @@ export const assignUser = async (taskId: number, userId: number, orgId: number) 
 
     const existingAssignment = await prisma.taskAssignment.findUnique({ where: { taskId_userId: { taskId, userId } } });
     if (existingAssignment) throw new ApiError(409, "User is already assigned to this task", "ASSIGNMENT_EXISTS");
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx:TransactionClient) => {
         const assignment = await tx.taskAssignment.create({ data: { taskId, userId } });
         //we will add this assignment as a notification to our emailQueue 
         try {
