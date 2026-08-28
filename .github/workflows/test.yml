@@ -1,0 +1,84 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: api/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: api
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        working-directory: api
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/taskflow
+        run: pnpm prisma generate
+
+      - name: Typecheck
+        working-directory: api
+        run: npx tsc --noEmit
+
+      - name: Run unit tests
+        working-directory: api
+        run: pnpm test
+
+      - name: Build
+        working-directory: api
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/taskflow
+        run: pnpm build
+
+  worker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: worker/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: worker
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        working-directory: worker
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: worker
+        run: pnpm build
